@@ -1,5 +1,7 @@
 const Contact = require("./schemas/contactsSchema");
 const User = require("./schemas/usersSchema");
+const sgMail = require("@sendgrid/mail");
+const nanoid = require("nanoid");
 const getAllContacts = async () => {
   return Contact.find();
 };
@@ -21,6 +23,29 @@ const createUser = async ({ email, password }) => {
     throw error;
   }
 };
+const codUnicDeVerificare = nanoid();
+const msg = {
+  to: email,
+  from: "adrianatarca1@gmail.com",
+  subject: "Email de verificare cont!",
+  text: `Codul de verificare este ${codUnicDeVerificare} / http://localhost:5000/api/account/verify/${codUnicDeVerificare}`,
+};
+
+sgMail
+  .send(msg)
+  .then(() => console.log("Email trimis"))
+  .catch(() => {
+    throw new Error("Eroare la trimitere");
+  });
+
+const newUser = new User({
+  email,
+  password,
+  name,
+  verificationToken: codUnicDeVerificare,
+});
+newUser.setPassword(password);
+return await newUser.save();
 
 const checkUserDB = async ({ email, password }) => {
   try {
@@ -94,6 +119,19 @@ const updateFavoriteContact = async (id, favoriteUpdate) => {
     { new: true }
   );
 };
+const verifyEmail = async (verificationToken) => {
+  const update = { verify: true, verificationToken: null };
+
+  const result = await User.findOneAndUpdate(
+    {
+      verificationToken,
+    },
+    { $set: update },
+    { new: true }
+  );
+  console.log(result);
+  if (!result) throw new Error("userul nu exista");
+};
 
 module.exports = {
   getAllContacts,
@@ -107,5 +145,6 @@ module.exports = {
   updateUser,
   checkUserDB,
   findUser,
-  getUserbyId,
+
+  verifyEmail,
 };
