@@ -11,6 +11,8 @@ const {
   logoutUserController,
   findUserController,
   uploadAvatarController,
+  verifyEmailController,
+  resendVerificationEmailController,
 } = require("../../controllers/index");
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -43,6 +45,8 @@ router.post("/signup", createUserController);
 router.post("/login", loginUserController);
 router.get("/current", auth, findUserController);
 router.get("/logout", auth, logoutUserController);
+router.get("/verify/:verificationToken", verifyEmailController);
+router.post("/verify/", resendVerificationEmailController);
 
 router.patch(
   "/users/avatars",

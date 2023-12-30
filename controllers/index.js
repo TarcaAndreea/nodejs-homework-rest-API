@@ -5,6 +5,7 @@ const {
   updateUser,
   checkUserDB,
   findUser,
+  verifyEmail,
 } = require("../services/index");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -12,7 +13,8 @@ const Jimp = require("jimp");
 const secret = process.env.SECRET;
 const fs = require("fs");
 const path = require("path");
-
+const { sendVerificationEmail } = require("../services/schemas/emailService");
+const { nanoid } = require("nanoid");
 const getUsersController = async (req, res, next) => {
   try {
     const results = await getAllUsers();
@@ -237,6 +239,58 @@ const uploadAvatarController = async (req, res, next) => {
     next(error);
   }
 };
+
+const generateVerificationToken = () => {
+  return nanoid();
+};
+const verifyEmailController = async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+    console.log(verificationToken);
+    await verifyEmail(verificationToken);
+
+    res.status(200).json({ mesaj: "Email verificat cu success", code: 200 });
+  } catch (error) {
+    res.status(404).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+const resendVerificationEmailController = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    console.log(email);
+    if (!email) {
+      return res.status(400).json({ message: "missing required field email" });
+    }
+
+    const user = await findUser({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User does not exist" });
+    }
+    if (user.verify) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    }
+    console.log(`User verify status: ${user.verify}`);
+    const verificationToken = await generateVerificationToken();
+    console.log(`Generated verification token: ${verificationToken}`);
+    user.verificationToken = verificationToken;
+    await user.save();
+    try {
+      await sendVerificationEmail(email, verificationToken);
+      res.status(200).json({ message: "Verification email resent" });
+      console.log("Sent verification email");
+    } catch (error) {
+      console.error("Failed to send verification email:", error);
+    }
+  } catch (error) {
+    res.status(500).json({ message: "An error occurred" });
+    console.log(error);
+  }
+};
 module.exports = {
   getAll,
   getUsersController,
@@ -246,4 +300,6 @@ module.exports = {
   logoutUserController,
   findUserController,
   uploadAvatarController,
+  verifyEmailController,
+  resendVerificationEmailController,
 };

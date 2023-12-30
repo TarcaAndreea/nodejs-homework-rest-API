@@ -24,6 +24,14 @@ const user = new Schema({
     default: null,
   },
   avatarUrl: { type: String, minLength: 2 },
+  verify: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: {
+    type: String,
+    required: [true, "Verify token is required"],
+  },
 });
 user.methods.setPassword = function (password) {
   this.password = bCrypt.hashSync(password, bCrypt.genSaltSync(6));
